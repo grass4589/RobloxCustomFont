@@ -1,6 +1,6 @@
 # RobloxCustomFont
 
-Replaces every TTF and OTF file in the Roblox fonts folder with a font of your choice.__
+Replaces every TTF and OTF file in the Roblox fonts folder with a font of your choice.\
 Only tested on Windows.
 
 # How to use
