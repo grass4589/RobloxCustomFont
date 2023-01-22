@@ -1,33 +1,15 @@
-function Show-Notification {
-    [cmdletbinding()]
-    Param (
-        [string]
-        $ToastTitle,
-        [string]
-        [parameter(ValueFromPipeline)]
-        $ToastText
-    )
+Add-Type -AssemblyName  System.Windows.Forms 
+$global:balloon = New-Object System.Windows.Forms.NotifyIcon 
+Get-Member -InputObject  $Global:balloon 
+[void](Register-ObjectEvent  -InputObject $balloon  -EventName MouseDoubleClick  -SourceIdentifier IconClicked  -Action {
+    $global:balloon.dispose()
+    
+    Remove-Job -Name IconClicked
+    Remove-Variable  -Name balloon  -Scope Global
+  }) 
+  $path = (Get-Process -id $pid).Path
+  $balloon.Icon  = [System.Drawing.Icon]::ExtractAssociatedIcon($path) 
 
-    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
-    $Template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
-
-    $RawXml = [xml] $Template.GetXml()
-    ($RawXml.toast.visual.binding.text|Where-Object {$_.id -eq "1"}).AppendChild($RawXml.CreateTextNode($ToastTitle)) > $null
-    ($RawXml.toast.visual.binding.text|Where-Object {$_.id -eq "2"}).AppendChild($RawXml.CreateTextNode($ToastText)) > $null
-
-    $SerializedXml = New-Object Windows.Data.Xml.Dom.XmlDocument
-    $SerializedXml.LoadXml($RawXml.OuterXml)
-
-    $Toast = [Windows.UI.Notifications.ToastNotification]::new($SerializedXml)
-    $Toast.Tag = "PowerShell"
-    $Toast.Group = "PowerShell"
-    $Toast.ExpirationTime = [DateTimeOffset]::Now.AddMinutes(1)
-
-    $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("RobloxCustomFont")
-    $Notifier.Show($Toast);
-}
-
-Add-Type -AssemblyName System.Windows.Forms
 $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ 
     InitialDirectory = [Environment]::GetFolderPath('Desktop') 
     Filter = 'TrueType Font (*.ttf)|*.ttf|OpenType Font (*.otf)|*.otf'
@@ -39,6 +21,7 @@ If ($FileBrowser.FileName) {
     foreach ($folder in $location) {
         Set-Location $env:LOCALAPPDATA\Roblox\Versions\$folder
         If (Test-Path -Path .\RobloxPlayerBeta.exe) {
+            taskkill /f /im RobloxPlayerBeta.exe
             Set-Location .\content\Fonts\
             Copy-Item .\TwemojiMozilla.ttf $env:TEMP
             foreach($file in Get-ChildItem .\ -Filter "*.*tf"){
@@ -48,5 +31,16 @@ If ($FileBrowser.FileName) {
             Remove-Item $env:TEMP\TwemojiMozilla.ttf
         }
     }
-    Show-Notification("Font replacement complete.")
+    $balloon.BalloonTipIcon  = [System.Windows.Forms.ToolTipIcon]::Info
+    $balloon.BalloonTipText  = 'Font replacement successful.'
+    $balloon.BalloonTipTitle  = "RobloxFontReplacement" 
+    $balloon.Visible  = $true 
+    $balloon.ShowBalloonTip(5000) 
+}
+else {
+    $balloon.BalloonTipIcon  = [System.Windows.Forms.ToolTipIcon]::Error
+    $balloon.BalloonTipText  = 'Font replacement Cancelled.'
+    $balloon.BalloonTipTitle  = "RobloxFontReplacement" 
+    $balloon.Visible  = $true 
+    $balloon.ShowBalloonTip(5000) 
 }
